@@ -1,0 +1,101 @@
+-- سكربت فلاش - اختراق السماء (Delta Version)
+local ScreenGui = Instance.new("ScreenGui")
+local MainButton = Instance.new("TextButton")
+local UICorner = Instance.new("UICorner")
+
+-- إعدادات الواجهة (الزر على اليمين)
+ScreenGui.Parent = game.CoreGui
+ScreenGui.ZIndexBehavior = Enum.ZIndexBehavior.Sibling
+
+MainButton.Name = "FlashSkyboxButton"
+MainButton.Parent = ScreenGui
+MainButton.BackgroundColor3 = Color3.fromRGB(30, 30, 30)
+MainButton.Position = UDim2.new(0.85, 0, 0.4, 0) -- موقعه على اليمين
+MainButton.Size = UDim2.new(0, 70, 0, 70) -- شكل مربع
+MainButton.Font = Enum.Font.GothamBold
+MainButton.Text = "فلاش ✅"
+MainButton.TextColor3 = Color3.fromRGB(255, 255, 255)
+MainButton.TextSize = 14
+MainButton.Draggable = true -- تقدر تحركه بيدك
+
+UICorner.CornerRadius = UDim.new(0, 15)
+UICorner.Parent = MainButton
+
+-- المتغيرات الأساسية
+local Players = game:GetService("Players")
+local ReplicatedStorage = game:GetService("ReplicatedStorage")
+local StarterGui = game:GetService("StarterGui")
+local LocalPlayer = Players.LocalPlayer
+
+local SelectedTshirtID = 73247127140922 -- معرف التيشرت الافتراضي (colkid)
+local SkyboxActive = false
+local CurrentTrack = nil
+local RigidTrack = nil
+
+-- وظيفة الإشعارات
+local function notify(title, text)
+    StarterGui:SetCore("SendNotification", {
+        Title = title,
+        Text = text,
+        Duration = 3
+    })
+end
+
+-- وظيفة التشغيل والإلغاء
+MainButton.MouseButton1Click:Connect(function()
+    local character = LocalPlayer.Character
+    if not character then return end
+    local humanoid = character:FindFirstChildOfClass("Humanoid")
+    if not humanoid then return end
+
+    if SkyboxActive then
+        -- [ قسم الإلغاء ]
+        if CurrentTrack then CurrentTrack:Stop(0.1) CurrentTrack = nil end
+        if RigidTrack then RigidTrack:Stop(0.1) RigidTrack = nil end
+
+        SkyboxActive = false
+        MainButton.BackgroundColor3 = Color3.fromRGB(30, 30, 30) -- يرجع لونه عادي
+        
+        pcall(function()
+            ReplicatedStorage.Remotes.ResetCharacterAppearance:FireServer()
+        end)
+        
+        task.wait(0.3)
+        if humanoid then humanoid.Health = 100 end
+        notify("فلاش", "تم إيقاف اختراق السماء")
+    else
+        -- [ قسم التشغيل ]
+        SkyboxActive = true
+        MainButton.BackgroundColor3 = Color3.fromRGB(0, 170, 255) -- يتغير لونه عند التشغيل
+
+        -- لبس التيشرت والجسم
+        pcall(function()
+            local WearShirt = ReplicatedStorage.Remotes:FindFirstChild("WearShirt")
+            if WearShirt then
+                WearShirt:InvokeServer(SelectedTshirtID)
+            end
+            ReplicatedStorage.Remotes.ChangeCharacterBody:InvokeServer({73247127140922})
+        end)
+
+        -- الأنميشن
+        local function LoadTrack(id, priority)
+            local anim = Instance.new("Animation")
+            anim.AnimationId = "rbxassetid://"..id
+            local track = humanoid:LoadAnimation(anim)
+            track.Priority = priority
+            return track
+        end
+
+        pcall(function()
+            CurrentTrack = LoadTrack(70883871260184, Enum.AnimationPriority.Action4)
+            CurrentTrack:Play(0.1, 1, 1)
+            
+            task.wait(0.5)
+            
+            RigidTrack = LoadTrack(3695333486, Enum.AnimationPriority.Movement)
+            RigidTrack:Play(0.1, 1, 0) -- تجميد الحركة
+        end)
+
+        notify("فلاش", "تم تفعيل اختراق السماء 🥶")
+    end
+end)
